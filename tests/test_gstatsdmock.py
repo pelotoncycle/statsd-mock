@@ -22,10 +22,8 @@ class StatsdMockServerTestCase(TestCase):
             server.start(bind_address='127.0.0.1', port=8125)
 
             statsd_conn = statsd.Connection(host='127.0.0.1', port=8125)
-            # statsd_client = statsd.Client('bigtag', statsd_conn)
 
             # test gauge
-            # guage = statsd_client.get_client(class_=statsd.Gauge)
             guage = statsd.Gauge('bigtag', statsd_conn)
 
             guage.send('subtag', 1)
