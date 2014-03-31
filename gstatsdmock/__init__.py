@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+import time
 import gevent
-# import time
 import pprint
 import socket
 from collections import deque
@@ -10,12 +10,17 @@ import gevent.socket as gsocket
 
 STATSD_DEFAULT_PORT = 8125
 
+
+class StatsdTimeOutError(Exception):
+    pass
+
+
 class StatsdMockServer(object):
 
     _metric_types = {
         'c': 'counter',
         'g': 'gauge',
-        't': 'timer',
+        'ms': 'timer',
         'r': 'raw'
     }
 
@@ -36,19 +41,10 @@ class StatsdMockServer(object):
         self.running = True
         while self.running:
             try:
-                # print 'waiting for packet'
                 msg, address = self.sock.recvfrom(self.recv_packet_size)
             except socket.error:
-                # print 'not received yet, sleeping...'
                 gevent.sleep(0.01)
             else:
-                # print 'received!'
-                # data = simplejson.loads(msg)
-                # self._emit(data['type'], data['time'], data['data'])
-
-                # TODO
-                # self.messages.append(msg)
-                print 'received: %s' % msg
                 metric_name, value, metric_type, rate, timestamp = self._parse_packet(msg) 
                 self._log(metric_name, value, metric_type, rate, timestamp)
 
@@ -66,7 +62,6 @@ class StatsdMockServer(object):
 
         metric_name, value = metric_name_and_value.split(':')
 
-        # value = chunks.popleft()
         metric_type = chunks.popleft()
         if metric_type == 'r':  # raw type will add timestamp
             timestamp = int(chunks.popleft())
@@ -89,14 +84,6 @@ class StatsdMockServer(object):
             timestamp=timestamp
         )
         self.metrics[metric_name].append(metric_data)
-        print 'saved: %s => %s' % (metric_name, pprint.pformat(metric_data))
-
-    # def _emit(self, event_type, time, data):
-    #     if event_type not in self.events:
-    #         self.events[event_type] = deque([])
-    #     emit_data = dict(event_type=event_type, time=time, data=data)
-    #     self.events[event_type].append(emit_data)
-    #     # print 'put: %s' % pprint.pformat(emit_data)
 
     def stop(self):
         assert self.running is True
@@ -107,15 +94,16 @@ class StatsdMockServer(object):
         self.port = None
         self.bind_address = None
 
-    def wait(self, metric_name, n):
+    def wait(self, metric_name, n, timeout_msec=0):
         assert self.sock is not None
+        time_msec_start = int(time.time() * 1000)
         if metric_name not in self.metrics:
             self.metrics[metric_name] = deque([])
 
         while len(self.metrics[metric_name]) < n:
-            # print 'current: %d' % len(self.metrics[metric_name])
-            # gevent.sleep(1.0)
             gevent.sleep()
+            if 0 < timeout_msec and time_msec_start + timeout_msec < int(time.time() * 1000):
+                raise StatsdTimeOutError('wait() for metric \'%s\' timed out' % metric_name)
 
     def dump_events(self):
         print '========StatsdMockServer'
@@ -138,10 +126,7 @@ def main():
     gauge = statsd_client.get_client(class_=statsd.Gauge)
 
     n = 5
-    # emitter = UDPCubeEmitter('127.0.0.1')
     for i in range(n):
-        # data = {'n': i, 'name': 'tomotaka'}
-        # print 'sent! data=%s' % pprint.pformat(data)
         gauge.send('subtag', i*10)
 
     mock_server.wait('bigtag.subtag', n)
