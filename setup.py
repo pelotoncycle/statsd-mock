@@ -13,5 +13,6 @@ setup(
     license=open('LICENSE').read(),
     include_package_data=True,
     install_requires=['gevent', 'python-statsd'],
-    tests_require=['nose']
+    tests_require=['nose'],
+    test_suite='nose.collector'
 )
