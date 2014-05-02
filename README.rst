@@ -1,6 +1,9 @@
 gevent-statsd-mock
 ==================
 
+.. image:: https://travis-ci.org/studio-ousia/gevent-statsd-mock.png?branch=master
+    :target: https://travis-ci.org/studio-ousia/gevent-statsd-mock
+
 Installation
 ------------
 
