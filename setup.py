@@ -3,16 +3,16 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='gevent-statsd-mock',
+    name='mock-statsd',
     version='0.0.1',
     description='statsd mock server based on gevent',
-    author='Studio Ousia',
-    author_email='admin@ousia.jp',
-    url='http://github.com/studio-ousia/gevent-statsd-mock',
+    author='Salton Massally',
+    author_email='salton.massally@gmail.com',
+    url='http://github.com/tarzan0820/mock-statsd',
     packages=find_packages(),
     license=open('LICENSE').read(),
     include_package_data=True,
-    install_requires=['gevent', 'python-statsd'],
+    install_requires=['gevent', 'statsd'],
     tests_require=['nose'],
     test_suite='nose.collector'
 )
