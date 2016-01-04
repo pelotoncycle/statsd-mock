@@ -5,17 +5,18 @@ import gevent
 import pprint
 import socket
 from collections import deque
+import signal
+
+from gevent.server import DatagramServer
 
 import gevent.socket as gsocket
 
 STATSD_DEFAULT_PORT = 8125
 
-
 class StatsdTimeOutError(Exception):
     pass
 
-
-class StatsdMockServer(object):
+class StatsdMockServer(DatagramServer):
 
     _metric_types = {
         'c': 'counter',
@@ -23,38 +24,19 @@ class StatsdMockServer(object):
         'ms': 'timer',
         'r': 'raw'
     }
-
-    def __init__(self, recv_packet_size=65535):
-        self.sock = None
-        self.port = None
-        self.bind_address = None
-        self.recv_packet_size = recv_packet_size
+        
+    def __init__(self):
         self.metrics = {}
+        listener = ':' + str(STATSD_DEFAULT_PORT)
+        super(StatsdMockServer, self).__init__(listener)
 
-    def start(self, bind_address='127.0.0.1', port=STATSD_DEFAULT_PORT):
-        if self.sock is not None:
-            raise StandardError('UDPCubeMockServer has already started')
-        self._prepare_socket(port, bind_address)
-        self.thread = gevent.spawn(self._run)
 
-    def _run(self):
-        self.running = True
-        while self.running:
-            try:
-                msg, address = self.sock.recvfrom(self.recv_packet_size)
-            except socket.error:
-                gevent.sleep(0.01)
-            else:
-                metric_name, value, metric_type, rate, timestamp = self._parse_packet(msg) 
-                self._log(metric_name, value, metric_type, rate, timestamp)
+    def handle(self, data, address):
+        print('%s: got %r' % (address[0], data))
+        self.socket.sendto(('Received %s bytes' % len(data)).encode('utf-8'), address)
 
-    def _prepare_socket(self, port, bind_address):
-        assert self.sock is None
-        self.port = port
-        self.bind_address = bind_address
-        self.sock = gsocket.socket(gsocket.AF_INET, gsocket.SOCK_DGRAM)
-        self.sock.setblocking(False)
-        self.sock.bind((self.bind_address, self.port))
+        metric_name, value, metric_type, rate, timestamp = self._parse_packet(data) 
+        self._log(metric_name, value, metric_type, rate, timestamp)
 
     def _parse_packet(self, packet):
         chunks = deque(packet.split('|'))
@@ -84,18 +66,8 @@ class StatsdMockServer(object):
             timestamp=timestamp
         )
         self.metrics[metric_name].append(metric_data)
-
-    def stop(self):
-        assert self.running is True
-        self.running = False
-        self.thread.join()
-        self.sock.close()
-        self.sock = None
-        self.port = None
-        self.bind_address = None
-
+    
     def wait(self, metric_name, n, timeout_msec=0):
-        assert self.sock is not None
         time_msec_start = int(time.time() * 1000)
         if metric_name not in self.metrics:
             self.metrics[metric_name] = deque([])
@@ -114,28 +86,26 @@ class StatsdMockServer(object):
                 print '[%d] %s' % (i, pprint.pformat(metric_data))
                 i += 1
 
-
 def main():
     import statsd
+    print('Receiving datagrams on :8125')
+    
     mock_server = StatsdMockServer()
-    mock_server.start('127.0.0.1')
+    mock_server.start()
     print 'hello'
-
-    statsd_connection = statsd.Connection(host='127.0.0.1', port=STATSD_DEFAULT_PORT)
-    statsd_client = statsd.Client('bigtag', statsd_connection)
-    gauge = statsd_client.get_client(class_=statsd.Gauge)
-
+ 
+    statsd_client = statsd.StatsClient(prefix='bigtag')
+ 
     n = 5
     for i in range(n):
-        gauge.send('subtag', i*10)
-
+        statsd_client.gauge('subtag', i*10)
+     
     mock_server.wait('bigtag.subtag', n)
     mock_server.stop()
     mock_server.dump_events()
+    
 
 
 if __name__ == '__main__':
-    gth = gevent.spawn(main)
-    gth.join()
-    print 'END'
-
+    main()
+    
