@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='statsdmock',
-    version='0.0.2',
+    version='0.0.3',
     description='statsd mock server based on gevent',
     author='Salton Massally',
     author_email='salton.massally@gmail.com',
