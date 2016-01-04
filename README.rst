@@ -4,11 +4,9 @@ statsd-mock
 .. image:: https://travis-ci.org/tarzan0820/statsd-mock.png?branch=master
     :target: https://travis-ci.org/tarzan0820/statsd-mock
 
-Based entirely on - `studio-ousia/gevent-statsd-moc <https://github.com/studio-ousia/gevent-statsd-mock>` 
-with `python-statsd <https://github.com/WoLpH/python-statsd>` dependency changed to `pystatsd <https://github.com/jsocol/pystatsd>`
+Based entirely on - `studio-ousia/gevent-statsd-moc <https://github.com/studio-ousia/gevent-statsd-mock>`_ 
+with `python-statsd <https://github.com/WoLpH/python-statsd>`_ dependency changed to `pystatsd <https://github.com/jsocol/pystatsd>`_
 and gevent.server.DatagramServer used to handle the server portion
-
-
 
 Installation
 ------------
